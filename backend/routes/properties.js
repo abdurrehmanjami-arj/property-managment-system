@@ -35,6 +35,7 @@ router.post("/", auth, async (req, res) => {
       scheme,
       totalPrice,
       advancePayment,
+      downPayment,
       numInstallments,
       numYears,
       monthlyInstallment,
@@ -45,12 +46,34 @@ router.post("/", auth, async (req, res) => {
       buyerAddress,
     } = req.body;
 
+    const initialPayments = [];
+    if (Number(advancePayment) > 0) {
+      initialPayments.push({
+        amount: Number(advancePayment),
+        type: "Advance",
+        month: "Advance/Token Payment",
+        agent: agent,
+      });
+    }
+    if (Number(downPayment) > 0) {
+      initialPayments.push({
+        amount: Number(downPayment),
+        type: "Down Payment",
+        month: "Down Payment",
+        agent: agent,
+      });
+    }
+
+    const totalInitial =
+      (Number(advancePayment) || 0) + (Number(downPayment) || 0);
+
     const property = new Property({
       plotNumber,
       size,
       scheme,
       totalPrice,
-      advancePayment,
+      advancePayment: Number(advancePayment) || 0,
+      downPayment: Number(downPayment) || 0,
       numInstallments,
       numYears,
       monthlyInstallment,
@@ -60,21 +83,12 @@ router.post("/", auth, async (req, res) => {
       buyerPhone,
       buyerCnic,
       buyerAddress,
-      status:
-        Number(advancePayment) >= Number(totalPrice)
-          ? "Completed"
-          : "Installment",
-      payments: [
-        {
-          amount: advancePayment,
-          type: "Advance",
-          month: "Advance Payment",
-          agent: agent,
-        },
-      ],
+      status: totalInitial >= Number(totalPrice) ? "Completed" : "Installment",
+      payments: initialPayments,
     });
 
     await property.save();
+    global.broadcast("data-updated", { type: "property", action: "add" });
     res.status(201).json(property);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -104,6 +118,7 @@ router.post("/:id/pay", auth, async (req, res) => {
     }
 
     await property.save();
+    global.broadcast("data-updated", { type: "property", action: "payment" });
     res.json(property);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -132,6 +147,10 @@ router.delete("/:propertyId/payments/:paymentId", auth, async (req, res) => {
     }
 
     await property.save();
+    global.broadcast("data-updated", {
+      type: "property",
+      action: "payment-delete",
+    });
     res.json(property);
   } catch (err) {
     res
@@ -167,6 +186,10 @@ router.put("/:propertyId/payments/:paymentId", auth, async (req, res) => {
     }
 
     await property.save();
+    global.broadcast("data-updated", {
+      type: "property",
+      action: "payment-edit",
+    });
     res.json(property);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -186,6 +209,7 @@ router.put("/:id", auth, async (req, res) => {
       { $set: req.body },
       { new: true }
     );
+    global.broadcast("data-updated", { type: "property", action: "update" });
     res.json(updatedProperty);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -201,6 +225,7 @@ router.delete("/:id", auth, async (req, res) => {
         .json({ message: "Only admins can delete properties" });
     }
     await Property.findByIdAndDelete(req.params.id);
+    global.broadcast("data-updated", { type: "property", action: "delete" });
     res.json({ message: "Property deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, Home, Users, DollarSign, Download, BarChart3, PieChart, Loader2 } from 'lucide-react';
 import api from '../api';
 
+import { useSocket } from '../contexts/SocketContext';
+
 const Reports = ({ darkMode }) => {
+  const socket = useSocket();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
     monthlyRevenue: [],
@@ -28,6 +31,15 @@ const Reports = ({ darkMode }) => {
   useEffect(() => {
     fetchReportData();
   }, []);
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('data-updated', () => {
+        fetchReportData();
+      });
+      return () => socket.off('data-updated');
+    }
+  }, [socket]);
 
   const fetchReportData = async () => {
     try {

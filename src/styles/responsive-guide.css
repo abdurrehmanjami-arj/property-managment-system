@@ -1,0 +1,47 @@
+/* Responsive Design Implementation Guide */
+
+/**
+ * This file documents the responsive design implementation
+ * for the Property Management System
+ * 
+ * Breakpoints:
+ * - Mobile: 320px - 640px
+ * - Tablet: 641px - 1024px  
+ * - Desktop: 1025px+
+ * 
+ * Key Features:
+ * 1. Mobile-first approach
+ * 2. Touch-friendly buttons (min 44px)
+ * 3. Responsive grids
+ * 4. Collapsible sidebar on mobile
+ * 5. Horizontal scrolling tables
+ * 6. Adaptive font sizes
+ * 7. Stack layouts on small screens
+ */
+
+/* Global Responsive Utilities Added to index.css */
+/* - .mobile-only / .desktop-only classes */
+/* - .responsive-grid for auto-responsive grids */
+/* - .responsive-table-container for scrollable tables */
+/* - Touch improvements for mobile (44px min buttons) */
+
+/* Layout Responsive Features in layout.css */
+/* - Sidebar collapses to drawer on mobile */
+/* - Main content adjusts padding */
+/* - Header actions stack appropriately */
+/* - Form grids become single column */
+
+/* Component-Level Responsiveness */
+/* Each major component should handle: */
+/* 1. Grid layouts (auto-fill, minmax) */
+/* 2. Flexible padding/margins */
+/* 3. Font size adjustments */
+/* 4. Button/icon sizing */
+/* 5. Modal width constraints */
+
+/* Testing Checklist */
+/* ✓ Mobile (375px, 414px) */
+/* ✓ Tablet (768px, 1024px) */
+/* ✓ Desktop (1280px, 1920px) */
+/* ✓ Touch interactions */
+/* ✓ Landscape/Portrait modes */

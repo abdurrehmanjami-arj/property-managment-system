@@ -28,17 +28,16 @@ const PropertyDetails = ({ property: initialProperty, onClose, darkMode, current
   const payments = property.payments || [];
   const isCompleted = property.status === 'Completed' || (property.totalPrice - payments.reduce((sum, p) => sum + p.amount, 0)) <= 0;
   
-  // Fallback: If no payments array exists or it's empty, count the advance manually
-  const totalPaid = payments.length > 0 
-    ? payments.reduce((sum, p) => sum + p.amount, 0)
-    : (property.advancePayment || 0);
+  // Calculate Total Paid: Advance + Down Payment + All Installments
+  const totalPaid = (property.advancePayment || 0) + (property.downPayment || 0) + payments.reduce((sum, p) => sum + p.amount, 0);
 
   const totalRemaining = Math.max(0, property.totalPrice - totalPaid);
   const progress = Math.min(100, Math.round((totalPaid / property.totalPrice) * 100));
 
   // Dynamic Installment Calculation
   const monthlyAmount = property.monthlyInstallment || 0;
-  const paidAboveAdvance = Math.max(0, totalPaid - (property.advancePayment || 0));
+  // paidAboveAdvance basically tracks installments paid. 
+  const paidAboveAdvance = Math.max(0, totalPaid - ((property.advancePayment || 0) + (property.downPayment || 0)));
   const paidSlots = monthlyAmount > 0 ? Math.floor(paidAboveAdvance / monthlyAmount) : 0;
   const totalSlots = property.numInstallments || 0;
   const remainingSlots = Math.max(0, totalSlots - paidSlots);

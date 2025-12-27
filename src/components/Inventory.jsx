@@ -3,7 +3,10 @@ import { PlusCircle, User, Home, DollarSign, Search, Filter, Eye, X, Trash2 } fr
 import PropertyDetails from './PropertyDetails';
 import api from '../api';
 
+import { useSocket } from '../contexts/SocketContext';
+
 const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
+  const socket = useSocket();
   const theme = {
     card: darkMode ? '#1e293b' : '#ffffff',
     text: darkMode ? '#f8fafc' : '#1e293b',
@@ -23,7 +26,8 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
     size: '', 
     scheme: '', 
     price: '', 
-    downPayment: '', 
+    advancePayment: '', // Token
+    downPayment: '',    // Actual Down Payment
     installments: '', 
     years: '', 
     rawYears: 0, 
@@ -47,6 +51,27 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
     fetchProperties();
   }, []);
 
+  React.useEffect(() => {
+    if (socket) {
+      socket.on('data-updated', (data) => {
+        fetchProperties();
+      });
+      return () => {
+        socket.off('data-updated');
+      };
+    }
+  }, [socket]);
+
+  // Sync selectedProperty when properties list updates
+  React.useEffect(() => {
+    if (selectedProperty) {
+      const updated = properties.find(p => p._id === selectedProperty._id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedProperty)) {
+        setSelectedProperty(updated);
+      }
+    }
+  }, [properties]);
+
   const handleAddPlot = async (e) => {
     if (e) e.preventDefault();
     try {
@@ -55,7 +80,8 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
         size: newPlot.size,
         scheme: newPlot.scheme,
         totalPrice: Number(newPlot.price),
-        advancePayment: Number(newPlot.downPayment),
+        advancePayment: Number(newPlot.advancePayment), // Token
+        downPayment: Number(newPlot.downPayment),       // Down Payment
         numInstallments: Number(newPlot.installments),
         numYears: Number(newPlot.rawYears),
         monthlyInstallment: Number(newPlot.monthly),
@@ -68,7 +94,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
       await api.post('/properties', payload);
       fetchProperties();
       setShowForm(false);
-      setNewPlot({ plot: '', sizeNum: '', sizeUnit: 'Marla', size: '', scheme: '', price: '', downPayment: '', installments: '', years: '', rawYears: 0, monthly: '', buyerName: '', buyerPhone: '', buyerCnic: '', buyerAddress: '' });
+      setNewPlot({ plot: '', sizeNum: '', sizeUnit: 'Marla', size: '', scheme: '', price: '', advancePayment: '', downPayment: '', installments: '', years: '', rawYears: 0, monthly: '', buyerName: '', buyerPhone: '', buyerCnic: '', buyerAddress: '' });
       showToast("Property added successfully", "success");
     } catch (err) {
       showToast(err.response?.data?.message || 'Failed to add plot', "error");
@@ -92,13 +118,14 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
     );
   };
 
-  const calculateInstallments = (price, downPayment, monthly) => {
+  const calculateInstallments = (price, advance, down, monthly) => {
     const p = Number(price) || 0;
-    const d = Number(downPayment) || 0;
+    const a = Number(advance) || 0;
+    const d = Number(down) || 0;
     const m = Number(monthly) || 0;
     
     if (m > 0) {
-      const remaining = p - d;
+      const remaining = p - (a + d);
       const inst = Math.ceil(remaining / m);
       
       const yrs = Math.floor(inst / 12);
@@ -115,7 +142,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
 
   const onFinanceChange = (field, value) => {
     const updatedPlot = { ...newPlot, [field]: value };
-    const { inst, yrs, rawYears } = calculateInstallments(updatedPlot.price, updatedPlot.downPayment, updatedPlot.monthly);
+    const { inst, yrs, rawYears } = calculateInstallments(updatedPlot.price, updatedPlot.advancePayment, updatedPlot.downPayment, updatedPlot.monthly);
     setNewPlot({ ...updatedPlot, installments: inst, years: yrs, rawYears: rawYears });
   };
 
@@ -198,16 +225,16 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
               <span style={badge}>{p.scheme}</span>
               <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: '8px' }}>
                 <span style={{ 
-                   color: (p.status === 'Completed' || (p.totalPrice - (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0) <= 0)) ? '#ffffff' : '#10b981', 
-                   background: (p.status === 'Completed' || (p.totalPrice - (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0) <= 0)) ? '#10b981' : 'transparent',
-                   padding: (p.status === 'Completed' || (p.totalPrice - (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0) <= 0)) ? '2px 8px' : '0',
+                   color: (p.status === 'Completed' || (p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0)) <= 0)) ? '#ffffff' : '#10b981', 
+                   background: (p.status === 'Completed' || (p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0)) <= 0)) ? '#10b981' : 'transparent',
+                   padding: (p.status === 'Completed' || (p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0)) <= 0)) ? '2px 8px' : '0',
                    borderRadius: '6px',
                    fontWeight: '900', 
                    fontSize: '11px', 
                    whiteSpace: 'nowrap',
                    textTransform: 'uppercase'
                 }}>
-                   {(p.totalPrice - (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0) <= 0) ? 'Completed' : p.status}
+                   {(p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0)) <= 0) ? 'Completed' : p.status}
                 </span>
                 {currentUser?.role === 'admin' && (
                   <Trash2 
@@ -236,12 +263,12 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                 <span>Total Price:</span> <span style={{ color: theme.text, fontWeight: '600' }}>PKR {p.totalPrice?.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Down Payment:</span> <span style={{ color: '#3b82f6' }}>PKR {p.advancePayment?.toLocaleString()}</span>
+                <span>Paid (Token+DP):</span> <span style={{ color: '#3b82f6' }}>PKR {((p.advancePayment || 0) + (p.downPayment || 0))?.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', padding: '8px', background: theme.input, borderRadius: '8px' }}>
                 <span style={{ fontWeight: '600', fontSize: '13px' }}>Remaining:</span>
                 <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '13px' }}>
-                  PKR {(p.totalPrice - (p.payments?.reduce((s, pay) => s + pay.amount, 0) || p.advancePayment))?.toLocaleString()}
+                  PKR {(p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s, pay) => s + pay.amount, 0) || 0)))?.toLocaleString()}
                 </span>
               </div>
               <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -265,66 +292,123 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
               <h3 style={{ fontWeight: '800', margin: 0 }}>Plot Booking Form</h3>
               <X onClick={() => setShowForm(false)} style={{ cursor: 'pointer', color: theme.subText }} size={24}/>
             </div>
-            <form onSubmit={handleAddPlot} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <form onSubmit={handleAddPlot} style={{ display: 'flex', flexDirection: 'column', gap: '25px', padding: '10px' }}>
+              
+              {/* Section 1: Property Details */}
+              <div style={{ padding: '20px', background: theme.input, borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <Home size={18} style={{ color: '#3b82f6' }}/>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>Property Details</h4>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                   <div>
+                      <label style={labelStyle}>Plot Number / ID</label>
+                      <input required placeholder="e.g. Plot 45-A" style={inputStyle(theme)} onChange={e => setNewPlot({...newPlot, plot: e.target.value})} />
+                   </div>
+                   <div>
+                      <label style={labelStyle}>Scheme / Project Name</label>
+                      <input required placeholder="e.g. Royal Orchard" style={inputStyle(theme)} onChange={e => setNewPlot({...newPlot, scheme: e.target.value})} />
+                   </div>
+                </div>
+                <div style={{ marginTop: '15px' }}>
+                   <label style={labelStyle}>Area Size</label>
+                   <div style={{ display: 'flex', gap: '10px' }}>
+                      <input required type="number" placeholder="Size (e.g. 5)" style={{...inputStyle(theme), flex: 1}} onChange={e => {
+                        const num = e.target.value;
+                        setNewPlot({...newPlot, sizeNum: num, size: `${num} ${newPlot.sizeUnit}`});
+                      }} />
+                      <select style={{...inputStyle(theme), width: '120px'}} value={newPlot.sizeUnit} onChange={e => {
+                        const unit = e.target.value;
+                        setNewPlot({...newPlot, sizeUnit: unit, size: `${newPlot.sizeNum} ${unit}`});
+                      }}>
+                        <option value="Marla">Marla</option>
+                        <option value="Kanal">Kanal</option>
+                        <option value="Sq Ft">Sq Ft</option>
+                        <option value="Acre">Acre</option>
+                      </select>
+                   </div>
+                </div>
+              </div>
+
+              {/* Section 2: Financials */}
+              <div style={{ padding: '20px', background: theme.input, borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <DollarSign size={18} style={{ color: '#10b981' }}/>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>Financial Plan</h4>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>Total Property Price (PKR)</label>
+                  <input required type="number" placeholder="0.00" style={{...inputStyle(theme), background: theme.card, fontSize: '16px', fontWeight: '700', color: '#10b981'}} onChange={e => onFinanceChange('price', e.target.value)} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                   <div>
+                      <label style={labelStyle}>Token / Advance (Optional)</label>
+                      <input type="number" placeholder="Initial Token" style={inputStyle(theme)} onChange={e => onFinanceChange('advancePayment', e.target.value)} /> 
+                      <p style={{ fontSize: '10px', color: theme.subText, marginTop: '5px' }}>Booking amount (if any)</p>
+                   </div>
+                   <div>
+                      <label style={labelStyle}>Down Payment (Optional)</label>
+                      <input type="number" placeholder="Lump sum payment" style={inputStyle(theme)} onChange={e => onFinanceChange('downPayment', e.target.value)} />
+                      <p style={{ fontSize: '10px', color: theme.subText, marginTop: '5px' }}>Major payment after booking</p>
+                   </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center', background: theme.card, padding: '15px', borderRadius: '15px', border: `1px solid ${theme.border}` }}>
+                   <div>
+                      <label style={labelStyle}>Monthly Installment</label>
+                      <input type="number" placeholder="0.00" style={inputStyle(theme)} onChange={e => onFinanceChange('monthly', e.target.value)} />
+                   </div>
+                   <div style={{ textAlign: 'right' }}>
+                       <div style={{ fontSize: '11px', color: theme.subText }}>Estimated Tenure</div>
+                       <div style={{ fontSize: '14px', fontWeight: '800', color: theme.text }}>{newPlot.installments || 0} Installments</div>
+                       <div style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '700' }}>{newPlot.years || '0 months'}</div>
+                   </div>
+                </div>
+              </div>
+
+              {/* Section 3: Buyer Info */}
+              <div style={{ padding: '20px', background: theme.input, borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <User size={18} style={{ color: '#f59e0b' }}/>
+                  <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, textTransform: 'uppercase', letterSpacing: '1px' }}>Buyer Information</h4>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                   <div>
+                      <label style={labelStyle}>Full Name</label>
+                      <input required placeholder="Buyer Name" style={inputStyle(theme)} value={newPlot.buyerName} onChange={e => setNewPlot({...newPlot, buyerName: e.target.value})} />
+                   </div>
+                   <div>
+                      <label style={labelStyle}>Phone Number</label>
+                      <input required placeholder="03xx-xxxxxxx" style={inputStyle(theme)} value={newPlot.buyerPhone} onChange={e => setNewPlot({...newPlot, buyerPhone: formatPhone(e.target.value)})} />
+                   </div>
+                </div>
+
+                <div style={{ marginBottom: '15px' }}>
+                   <label style={labelStyle}>CNIC Number</label>
+                   <input required placeholder="00000-0000000-0" style={inputStyle(theme)} value={newPlot.buyerCnic} onChange={e => setNewPlot({...newPlot, buyerCnic: formatCNIC(e.target.value)})} />
+                </div>
+
                 <div>
-                  <label style={labelStyle}>Plot & Scheme</label>
-                  <input required placeholder="Plot Number" style={inputStyle(theme)} onChange={e => setNewPlot({...newPlot, plot: e.target.value})} />
-                  <div style={{ display: 'flex', gap: '5px', marginTop: '10px' }}>
-                    <input required type="number" placeholder="Size" style={{...inputStyle(theme), flex: 1}} onChange={e => {
-                      const num = e.target.value;
-                      setNewPlot({...newPlot, sizeNum: num, size: `${num} ${newPlot.sizeUnit}`});
-                    }} />
-                    <select style={{...inputStyle(theme), width: '100px'}} value={newPlot.sizeUnit} onChange={e => {
-                      const unit = e.target.value;
-                      setNewPlot({...newPlot, sizeUnit: unit, size: `${newPlot.sizeNum} ${unit}`});
-                    }}>
-                      <option value="Marla">Marla</option>
-                      <option value="Kanal">Kanal</option>
-                      <option value="Sq Ft">Sq Ft</option>
-                      <option value="Acre">Acre</option>
-                    </select>
-                  </div>
-                  <input required placeholder="Scheme Name" style={{...inputStyle(theme), marginTop: '10px'}} onChange={e => setNewPlot({...newPlot, scheme: e.target.value})} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Pricing</label>
-                  <input required type="number" placeholder="Total Price" style={inputStyle(theme)} onChange={e => onFinanceChange('price', e.target.value)} />
-                  <input required type="number" placeholder="Advance Payment" style={{...inputStyle(theme), marginTop: '10px'}} onChange={e => onFinanceChange('downPayment', e.target.value)} />
+                   <label style={labelStyle}>Residential Address</label>
+                   <textarea required placeholder="Full Address" style={{...inputStyle(theme), height: '80px', resize: 'none'}} onChange={e => setNewPlot({...newPlot, buyerAddress: e.target.value})} />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.8fr', gap: '15px', background: theme.input, padding: '15px', borderRadius: '15px', alignItems: 'center' }}>
-                <div>
-                  <label style={labelStyle}>Monthly Amount</label>
-                  <input required type="number" placeholder="Amount" style={inputStyle(theme)} onChange={e => onFinanceChange('monthly', e.target.value)} />
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <label style={labelStyle}>Installments</label>
-                  <div style={{ fontWeight: '800', fontSize: '18px', color: '#3b82f6' }}>{newPlot.installments || '0'}</div>
-                </div>
-                <div style={{ textAlign: 'right', borderLeft: `1px solid ${theme.border}`, paddingLeft: '15px' }}>
-                  <label style={labelStyle}>Total Tenure (Years/Months)</label>
-                  <div style={{ fontWeight: '800', fontSize: '16px', color: '#10b981', whiteSpace: 'nowrap' }}>{newPlot.years || 'Auto Calculate'}</div>
-                </div>
+               {/* Summary Footer */}
+              <div style={{ background: '#3b82f610', padding: '20px', borderRadius: '15px', border: '1px solid #3b82f630', textAlign: 'center' }}>
+                 <p style={{ margin: 0, fontSize: '12px', color: theme.subText, marginBottom: '5px' }}>Net Payable Balance</p>
+                 <h3 style={{ margin: 0, fontSize: '24px', fontWeight: '900', color: '#3b82f6' }}>
+                    PKR {(Number(newPlot.price) - (Number(newPlot.advancePayment || 0) + Number(newPlot.downPayment || 0))).toLocaleString()}
+                 </h3>
               </div>
 
-              <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: '15px' }}>
-                <h4 style={{ marginBottom: '10px' }}>Buyer Information</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                  <input required placeholder="Buyer Name" style={inputStyle(theme)} value={newPlot.buyerName} onChange={e => setNewPlot({...newPlot, buyerName: e.target.value})} />
-                  <input required placeholder="Buyer Phone (0000-0000000)" style={inputStyle(theme)} value={newPlot.buyerPhone} onChange={e => setNewPlot({...newPlot, buyerPhone: formatPhone(e.target.value)})} />
-                </div>
-                <input required placeholder="Buyer CNIC Number (00000-0000000-0)" style={{...inputStyle(theme), marginTop: '10px'}} value={newPlot.buyerCnic} onChange={e => setNewPlot({...newPlot, buyerCnic: formatCNIC(e.target.value)})} />
-                <textarea required placeholder="Buyer Complete Address" style={{...inputStyle(theme), marginTop: '10px', height: '60px'}} onChange={e => setNewPlot({...newPlot, buyerAddress: e.target.value})} />
+              <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+                <button type="submit" style={{ ...primaryBtn, flex: 1, padding: '15px', fontSize: '16px' }}>Confirm & Create</button>
+                <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, padding: '15px', borderRadius: '12px', color: theme.subText, fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
               </div>
-
-              <div style={{ fontSize: '13px', color: '#10b981', background: '#10b98110', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
-                Remaining Balance: <b>PKR {(Number(newPlot.price) - Number(newPlot.downPayment)).toLocaleString()}</b>
-              </div>
-
-              <button type="submit" style={primaryBtn}>Confirm Booking</button>
-              <button type="button" onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
             </form>
           </div>
         </div>

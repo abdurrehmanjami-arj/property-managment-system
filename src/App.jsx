@@ -10,9 +10,14 @@ import Customers from './components/Customers';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import BackupRestore from './components/BackupRestore';
+import RentInventory from './components/RentInventory';
+import RentCustomers from './components/RentCustomers';
+import RentReports from './components/RentReports';
+import DashboardHome from './components/DashboardHome';
 import { SocketProvider, useSocket } from './contexts/SocketContext';
 import api from './api';
-import { Bell, Moon, Sun, UserCheck, LogOut, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
+import './styles/layout.css';
+import { Bell, Moon, Sun, UserCheck, LogOut, CheckCircle, AlertCircle, Trash2, Menu } from 'lucide-react';
 
 const App = () => {
   const [darkMode, setDarkMode] = useState(false);
@@ -20,6 +25,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -29,6 +35,8 @@ const App = () => {
   const askConfirm = (title, message, onConfirm) => {
     setConfirmDialog({ title, message, onConfirm });
   };
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -101,7 +109,7 @@ const App = () => {
           <Route path="/reset-password/:token" element={<ResetWrapper onReset={handleResetPassword} darkMode={darkMode} />} />
 
           <Route path="/" element={
-            user ? <Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} onLogout={handleLogout} toast={toast} showToast={showToast} askConfirm={askConfirm} /> : <Navigate to="/login" />
+            user ? <Dashboard user={user} darkMode={darkMode} setDarkMode={setDarkMode} onLogout={handleLogout} toast={toast} showToast={showToast} askConfirm={askConfirm} sidebarOpen={sidebarOpen} toggleSidebar={toggleSidebar} /> : <Navigate to="/login" />
           } />
           
           <Route path="*" element={<Navigate to="/" />} />
@@ -110,7 +118,7 @@ const App = () => {
         {/* Global Confirmation Modal */}
         {confirmDialog && (
           <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(10px)' }}>
-             <div style={{ background: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#f8fafc' : '#1e293b', width: '420px', padding: '40px', borderRadius: '30px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: `1px solid ${darkMode ? '#334155' : '#f1f5f9'}` }}>
+             <div className="modal-content" style={{ background: darkMode ? '#1e293b' : '#ffffff', color: darkMode ? '#f8fafc' : '#1e293b', width: '420px', padding: '40px', borderRadius: '30px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', border: `1px solid ${darkMode ? '#334155' : '#f1f5f9'}` }}>
                 <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#ef444415', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 25px' }}>
                    <Trash2 size={40}/>
                 </div>
@@ -143,8 +151,8 @@ const ResetWrapper = ({ onReset, darkMode }) => {
   return <ResetPassword token={token} onReset={onReset} darkMode={darkMode} />;
 };
 
-const Dashboard = ({ user, darkMode, setDarkMode, onLogout, toast, showToast, askConfirm }) => {
-  const [activeTab, setActiveTab] = useState('customers');
+const Dashboard = ({ user, darkMode, setDarkMode, onLogout, toast, showToast, askConfirm, sidebarOpen, toggleSidebar }) => {
+  const [activeTab, setActiveTab] = useState('dashboard');
   const socket = useSocket();
 
   // Listen for force logout events
@@ -172,9 +180,10 @@ const Dashboard = ({ user, darkMode, setDarkMode, onLogout, toast, showToast, as
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: theme.bg, transition: '0.3s', fontFamily: "'Poppins', sans-serif", overflow: 'hidden' }}>
-      <div className="no-print" style={{ height: '100%', display: 'flex' }}>
-        <Sidebar darkMode={darkMode} activeTab={activeTab} setActiveTab={setActiveTab} user={user} onLogout={onLogout} />
+    <div className="app-container" style={{ backgroundColor: theme.bg }}>
+      <div className="no-print">
+        {sidebarOpen && <div className="sidebar-overlay" onClick={toggleSidebar}></div>}
+        <Sidebar darkMode={darkMode} activeTab={activeTab} setActiveTab={setActiveTab} user={user} onLogout={onLogout} isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
       </div>
 
       {/* Global Notification Toast */}
@@ -192,29 +201,38 @@ const Dashboard = ({ user, darkMode, setDarkMode, onLogout, toast, showToast, as
         </div>
       )}
 
-      <main style={{ flex: 1, padding: '30px', overflowY: 'auto' }}>
+      <main className="main-content">
         <header className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: '800', color: theme.text }}>
-            {activeTab === 'customers' && 'Customer Management'}
-            {activeTab === 'inventory' && 'Property Inventory'}
-            {activeTab === 'users' && 'Staff Management'}
-            {activeTab === 'payments' && 'Payment Management'}
-            {activeTab === 'reports' && 'Analytics & Reports'}
-            {activeTab === 'backup' && 'Backup & Restore'}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <button className="mobile-menu-btn" onClick={toggleSidebar} style={{ color: theme.text, background: theme.card, border: `1px solid ${theme.border}` }}>
+              <Menu size={24} />
+            </button>
+            <h1 className="header-title" style={{ fontSize: '26px', fontWeight: '800', color: theme.text }}>
+              {activeTab === 'dashboard' && 'Analytics Dashboard'}
+              {activeTab === 'customers' && 'Property Customers'}
+              {activeTab === 'inventory' && 'Property List'}
+              {activeTab === 'rent-inventory' && 'Rental Properties'}
+              {activeTab === 'rent-customers' && 'Rent Customer Directory'}
+              {activeTab === 'users' && 'Employees'}
+              {activeTab === 'payments' && 'Installments'}
+              {activeTab === 'reports' && 'Property Reports'}
+              {activeTab === 'rent-reports' && 'Rent Reports'}
+              {activeTab === 'backup' && 'Database'}
+            </h1>
+          </div>
 
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+          <div className="header-actions" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
             <div onClick={() => setDarkMode(!darkMode)} style={{ background: theme.card, padding: '10px', borderRadius: '12px', cursor: 'pointer', border: `1px solid ${theme.border}` }}>
               {darkMode ? <Sun size={22} color="#fbbf24"/> : <Moon size={22} color="#64748b"/>}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: `2px solid ${theme.border}`, paddingLeft: '20px' }}>
-               <div style={{ textAlign: 'right' }}>
+               <div className="user-info-text" style={{ textAlign: 'right' }}>
                   <p style={{ fontSize: '14px', fontWeight: '800', color: theme.text }}>{user.name.toUpperCase()}</p>
                   <span style={{ fontSize: '10px', color: '#3b82f6' }}>{user.role.toUpperCase()}</span>
                </div>
-               <div style={{ width: '45px', height: '45px', borderRadius: '14px', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <UserCheck size={24}/>
+               <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserCheck size={20}/>
                </div>
                <div onClick={onLogout} style={{ background: theme.card, padding: '10px', borderRadius: '12px', cursor: 'pointer', border: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center' }}>
                   <LogOut size={18} color="#ef4444"/>
@@ -223,12 +241,18 @@ const Dashboard = ({ user, darkMode, setDarkMode, onLogout, toast, showToast, as
           </div>
         </header>
 
-        {activeTab === 'customers' && <Customers darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
-        {activeTab === 'inventory' && <Inventory darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
-        {activeTab === 'users' && <UserManagement darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
-        {activeTab === 'payments' && <Payments darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
-        {activeTab === 'reports' && <Reports darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
-        {activeTab === 'backup' && <BackupRestore darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
+        <div className="page-content">
+          {activeTab === 'dashboard' && <DashboardHome darkMode={darkMode} setActiveTab={setActiveTab} showToast={showToast} />}
+          {activeTab === 'customers' && <Customers darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'inventory' && <Inventory darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'rent-inventory' && <RentInventory darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'rent-customers' && <RentCustomers darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'users' && <UserManagement darkMode={darkMode} currentUser={user} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'payments' && <Payments darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'reports' && <Reports darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'rent-reports' && <RentReports darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
+          {activeTab === 'backup' && <BackupRestore darkMode={darkMode} showToast={showToast} askConfirm={askConfirm} />}
+        </div>
       </main>
     </div>
   );

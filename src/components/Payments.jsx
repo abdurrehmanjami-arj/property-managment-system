@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, Calendar, CheckCircle, Clock, Search, Download, Filter, X, User } from 'lucide-react';
 import api from '../api';
 
+import { useSocket } from '../contexts/SocketContext';
+
 const Payments = ({ darkMode }) => {
+  const socket = useSocket();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,6 +21,15 @@ const Payments = ({ darkMode }) => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+     if (socket) {
+       socket.on('data-updated', () => {
+         fetchData();
+       });
+       return () => socket.off('data-updated');
+     }
+  }, [socket]);
 
   const fetchData = async () => {
     try {

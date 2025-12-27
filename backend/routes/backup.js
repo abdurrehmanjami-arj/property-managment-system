@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require("../middleware/auth");
 const User = require("../models/User");
 const Property = require("../models/Property");
+const Rent = require("../models/Rent");
 
 // Create Complete Backup (Admin Only)
 router.get("/create-backup", auth, async (req, res) => {
@@ -17,6 +18,7 @@ router.get("/create-backup", auth, async (req, res) => {
     // Get all data from database
     const users = await User.find({}).select("-__v");
     const properties = await Property.find({}).select("-__v");
+    const rents = await Rent.find({}).select("-__v");
 
     // Create backup object
     const backup = {
@@ -26,10 +28,12 @@ router.get("/create-backup", auth, async (req, res) => {
         version: "1.0",
         totalUsers: users.length,
         totalProperties: properties.length,
+        totalRents: rents.length,
       },
       data: {
         users: users,
         properties: properties,
+        rents: rents,
       },
     };
 
@@ -69,6 +73,7 @@ router.post("/restore-backup", auth, async (req, res) => {
     // Clear existing data (DANGEROUS - only for restore)
     await User.deleteMany({});
     await Property.deleteMany({});
+    await Rent.deleteMany({});
     console.log("Existing data cleared");
 
     // Restore users
@@ -94,12 +99,24 @@ router.post("/restore-backup", auth, async (req, res) => {
       console.log("Properties restored:", backup.data.properties.length);
     }
 
+    // Restore rents
+    if (backup.data.rents && backup.data.rents.length > 0) {
+      const rentsToInsert = backup.data.rents.map((rent) => {
+        const { _id, ...rentData } = rent;
+        return rentData;
+      });
+
+      await Rent.insertMany(rentsToInsert, { ordered: false });
+      console.log("Rents restored:", backup.data.rents.length);
+    }
+
     res.json({
       success: true,
       message: "Backup restored successfully",
       restored: {
         users: backup.data.users?.length || 0,
         properties: backup.data.properties?.length || 0,
+        rents: backup.data.rents?.length || 0,
       },
     });
   } catch (err) {
@@ -122,6 +139,7 @@ router.get("/backup-stats", auth, async (req, res) => {
 
     const userCount = await User.countDocuments();
     const propertyCount = await Property.countDocuments();
+    const rentCount = await Rent.countDocuments();
 
     // Count total payments across all properties
     const properties = await Property.find({});
@@ -143,6 +161,7 @@ router.get("/backup-stats", auth, async (req, res) => {
       stats: {
         users: userCount,
         properties: propertyCount,
+        rents: rentCount,
         payments: totalPayments,
         lastChecked: new Date().toISOString(),
       },

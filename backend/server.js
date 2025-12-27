@@ -69,6 +69,12 @@ global.emitToUser = (userId, event, data) => {
   }
 };
 
+// Global broadcast to all connected clients
+global.broadcast = (event, data) => {
+  io.emit(event, data);
+  console.log(`📡 Broadcasted ${event}`);
+};
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => console.log("✅ Connected to MongoDB Successfully!"))
@@ -82,6 +88,7 @@ mongoose
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/properties", require("./routes/properties"));
+app.use("/api/rents", require("./routes/rents"));
 app.use("/api/backup", require("./routes/backup"));
 
 const PORT = process.env.PORT || 5000;

@@ -6,7 +6,8 @@ const PropertySchema = new mongoose.Schema(
     size: { type: String }, // 5 Marla, 10 Marla etc.
     scheme: { type: String, required: true },
     totalPrice: { type: Number, required: true },
-    advancePayment: { type: Number, required: true },
+    advancePayment: { type: Number, default: 0 },
+    downPayment: { type: Number, default: 0 },
     numInstallments: { type: Number },
     numYears: { type: Number },
     monthlyInstallment: { type: Number },
