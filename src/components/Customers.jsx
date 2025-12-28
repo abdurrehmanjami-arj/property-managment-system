@@ -297,21 +297,21 @@ const Customers = ({ darkMode, currentUser, showToast, askConfirm }) => {
              </div>
 
              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderTop: `1px solid ${theme.border}`, paddingTop: '15px' }}>
-                <div>
+                <div style={{ paddingRight: '15px' }}>
                    <p style={{ fontSize: '11px', color: theme.subText, margin: 0 }}>Total Investment</p>
-                   <p style={{ fontSize: '15px', fontWeight: '800', color: theme.text, margin: 0 }}>PKR {customer.totalPrice?.toLocaleString()}</p>
+                   <p style={{ fontSize: '12px', fontWeight: '800', color: theme.text, margin: 0, whiteSpace: 'nowrap' }}>PKR {customer.totalPrice?.toLocaleString()}</p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                   <div style={{ display: 'flex', gap: '20px', justifyContent: 'flex-end', marginBottom: '8px' }}>
+                <div style={{ textAlign: 'right', paddingRight: '15px' }}>
+                   <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end', marginBottom: '8px' }}>
                       <div style={{ textAlign: 'right' }}>
                          <p style={{ fontSize: '10px', color: theme.subText, margin: 0 }}>Paid So Far</p>
-                         <p style={{ fontSize: '15px', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                         <p style={{ fontSize: '12px', fontWeight: '900', color: '#10b981', margin: 0, whiteSpace: 'nowrap' }}>
                            PKR {customer.payments?.reduce((s,p)=>s+p.amount, 0).toLocaleString()}
                          </p>
                       </div>
                       <div style={{ textAlign: 'right', borderLeft: `1px solid ${theme.border}`, paddingLeft: '15px' }}>
                          <p style={{ fontSize: '10px', color: theme.subText, margin: 0 }}>Remaining</p>
-                         <p style={{ fontSize: '15px', fontWeight: '900', color: '#ef4444', margin: 0 }}>
+                         <p style={{ fontSize: '12px', fontWeight: '900', color: '#ef4444', margin: 0, whiteSpace: 'nowrap' }}>
                            PKR {(customer.totalPrice - (customer.payments?.reduce((s,p)=>s+p.amount, 0))).toLocaleString()}
                          </p>
                       </div>

@@ -262,7 +262,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
         {filteredProperties.map(p => (
           <div key={p._id} style={{ padding: '20px', borderRadius: '20px', background: theme.card, border: `1px solid ${theme.border}`, transition: '0.2s', cursor: 'pointer' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'flex-start' }}>
@@ -309,21 +309,21 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#94a3b8', fontSize: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Total Price:</span> <span style={{ color: theme.text, fontWeight: '600' }}>PKR {p.totalPrice?.toLocaleString()}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', color: '#94a3b8', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Total Price:</span> <span style={{ color: theme.text, fontWeight: '700', fontSize: '12px', whiteSpace: 'nowrap', paddingRight: '20px' }}>PKR {p.totalPrice?.toLocaleString() || 0}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Paid (Token+DP):</span> <span style={{ color: '#3b82f6' }}>PKR {((p.advancePayment || 0) + (p.downPayment || 0))?.toLocaleString()}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Paid (Token+DP):</span> <span style={{ color: '#3b82f6', fontWeight: '700', fontSize: '12px', whiteSpace: 'nowrap', paddingRight: '20px' }}>PKR {((p.advancePayment || 0) + (p.downPayment || 0))?.toLocaleString() || 0}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', padding: '8px', background: theme.input, borderRadius: '8px' }}>
-                <span style={{ fontWeight: '600', fontSize: '13px' }}>Remaining:</span>
-                <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '13px' }}>
-                  PKR {(p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s, pay) => s + pay.amount, 0) || 0)))?.toLocaleString()}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px', padding: '8px', background: theme.input, borderRadius: '8px', alignItems: 'center', marginRight: '10px' }}>
+                <span style={{ fontWeight: '600', fontSize: '11px' }}>Remaining:</span>
+                <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '12px', whiteSpace: 'nowrap', paddingRight: '10px' }}>
+                  PKR {(p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s, pay) => s + pay.amount, 0) || 0)))?.toLocaleString() || 0}
                 </span>
               </div>
               <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: `1px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <User size={14}/> <span style={{fontSize: '12px'}}>Sold By: {p.agent}</span>
+                <User size={14}/> <span style={{fontSize: '11px'}}>Sold By: {p.agent}</span>
               </div>
               <button 
                 onClick={() => setSelectedProperty(p)}

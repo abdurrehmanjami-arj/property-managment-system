@@ -8,13 +8,11 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [newEmp, setNewEmp] = useState({ 
-    name: '', email: '', password: '', role: 'employee', cnic: '', phone: '',
-    securityQuestions: { birthPlace: '', favoritePet: '', motherName: '', favoriteColor: '' }
+    name: '', email: '', password: '', role: 'employee', cnic: '', phone: ''
   });
   const [editEmp, setEditEmp] = useState(null); 
   const [showEditForm, setShowEditForm] = useState(false);
-  const [verificationPass, setVerificationPass] = useState('');
-  const [showQuestions, setShowQuestions] = useState(false);
+
 
   useEffect(() => {
     fetchUsers();
@@ -39,8 +37,7 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
       await api.post('/auth/add-user', newEmp);
       setShowAddForm(false);
       setNewEmp({ 
-        name: '', email: '', password: '', role: 'employee', cnic: '', phone: '',
-        securityQuestions: { birthPlace: '', favoritePet: '', motherName: '', favoriteColor: '' }
+        name: '', email: '', password: '', role: 'employee', cnic: '', phone: ''
       });
       fetchUsers();
       showToast("User added successfully", "success");
@@ -74,31 +71,9 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
   const handleEditClick = (emp) => {
     setEditEmp(emp);
     setShowEditForm(true);
-    setShowQuestions(false);
-    setVerificationPass('');
   };
 
-  const handleVerifyEditPassword = async () => {
-    if (!verificationPass || verificationPass.trim() === '') {
-      showToast("Please enter your password", "error");
-      return;
-    }
-    
-    try {
-      const response = await api.post('/auth/verify-password', { password: verificationPass });
-      console.log('Password verification response:', response.data);
-      
-      if (response.data.success) {
-        setShowQuestions(true);
-        showToast("Password verified successfully", "success");
-      } else {
-        showToast("Incorrect password. Please try again.", "error");
-      }
-    } catch (err) {
-      console.error("Password verification error:", err);
-      showToast(err.response?.data?.message || "Verification failed. Please try again.", "error");
-    }
-  };
+
 
   const formatCNIC = (value) => {
     const val = value.replace(/\D/g, '');
@@ -268,17 +243,6 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
                 <option value="admin">Admin Access</option>
               </select>
 
-              {newEmp.role === 'admin' && (
-                <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: '10px', marginTop: '5px' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '700', color: '#3b82f6', marginBottom: '10px' }}>Security Recovery Questions (Admin Only):</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <input required placeholder="Birth Place" style={{...formInput(theme), width: '100%'}} onChange={e => setNewEmp({...newEmp, securityQuestions: {...newEmp.securityQuestions, birthPlace: e.target.value}})} />
-                    <input required placeholder="Favorite Pet" style={{...formInput(theme), width: '100%'}} onChange={e => setNewEmp({...newEmp, securityQuestions: {...newEmp.securityQuestions, favoritePet: e.target.value}})} />
-                    <input required placeholder="Mother Name" style={{...formInput(theme), width: '100%'}} onChange={e => setNewEmp({...newEmp, securityQuestions: {...newEmp.securityQuestions, motherName: e.target.value}})} />
-                    <input required placeholder="Favorite Color" style={{...formInput(theme), width: '100%'}} onChange={e => setNewEmp({...newEmp, securityQuestions: {...newEmp.securityQuestions, favoriteColor: e.target.value}})} />
-                  </div>
-                </div>
-              )}
 
               <button type="submit" style={modalSubmitBtn}>Create Account</button>
             </form>
@@ -317,60 +281,9 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
               </div>
 
               {editEmp.role === 'admin' && (
-                 <div style={{ borderTop: `1px solid ${theme.border}`, paddingTop: '15px', marginTop: '10px' }}>
-                    {/* Check if editing own account */}
-                    {currentUser && editEmp.email === currentUser.email ? (
-                       <>
-                          {!showQuestions ? (
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <p style={{ fontSize: '12px', fontWeight: '700', color: theme.subText }}>🔒 Enter your password to view/edit security questions:</p>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                   <input 
-                                      type="password" 
-                                      placeholder="Current Password" 
-                                      style={{...formInput(theme), flex: 1}} 
-                                      value={verificationPass}
-                                      onChange={(e) => setVerificationPass(e.target.value)}
-                                   />
-                                   <button 
-                                      type="button" 
-                                      onClick={handleVerifyEditPassword}
-                                      style={{ ...modalSubmitBtn, width: 'auto', padding: '0 20px', background: '#10b981' }}
-                                   >
-                                      Verify
-                                   </button>
-                                </div>
-                             </div>
-                          ) : (
-                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <p style={{ fontSize: '12px', fontWeight: '700', color: '#10b981' }}>✓ Recovery Questions (Admin):</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                   <div>
-                                      <label style={labelStyleSmall}>Birth Place</label>
-                                      <input placeholder="Not set yet" style={{...formInput(theme), width: '100%'}} value={editEmp.securityQuestions?.birthPlace || ''} onChange={e => setEditEmp({...editEmp, securityQuestions: {...(editEmp.securityQuestions || {}), birthPlace: e.target.value}})} />
-                                   </div>
-                                   <div>
-                                      <label style={labelStyleSmall}>Favorite Pet</label>
-                                      <input placeholder="Not set yet" style={{...formInput(theme), width: '100%'}} value={editEmp.securityQuestions?.favoritePet || ''} onChange={e => setEditEmp({...editEmp, securityQuestions: {...(editEmp.securityQuestions || {}), favoritePet: e.target.value}})} />
-                                   </div>
-                                   <div>
-                                      <label style={labelStyleSmall}>Mother Name</label>
-                                      <input placeholder="Not set yet" style={{...formInput(theme), width: '100%'}} value={editEmp.securityQuestions?.motherName || ''} onChange={e => setEditEmp({...editEmp, securityQuestions: {...(editEmp.securityQuestions || {}), motherName: e.target.value}})} />
-                                   </div>
-                                   <div>
-                                      <label style={labelStyleSmall}>Favorite Color</label>
-                                      <input placeholder="Not set yet" style={{...formInput(theme), width: '100%'}} value={editEmp.securityQuestions?.favoriteColor || ''} onChange={e => setEditEmp({...editEmp, securityQuestions: {...(editEmp.securityQuestions || {}), favoriteColor: e.target.value}})} />
-                                   </div>
-                                </div>
-                             </div>
-                          )}
-                       </>
-                    ) : (
-                       <p style={{ fontSize: '12px', fontWeight: '700', color: theme.subText }}>
-                          Security questions can only be viewed/edited by the admin themselves.
-                       </p>
-                    )}
-                 </div>
+                 <p style={{ fontSize: '12px', fontWeight: '700', color: theme.subText, marginTop: '10px' }}>
+                    * Admin users have full system access.
+                 </p>
               )}
 
               <button type="submit" style={modalSubmitBtn}>Update Information</button>

@@ -217,7 +217,7 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
       </div>
 
       {/* Grid of Rent Houses */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
         {currentItems.map(r => (
           <div key={r._id} onClick={() => setSelectedRent(r)} style={{ ...houseCard, background: theme.card, border: `1px solid ${theme.border}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
@@ -256,15 +256,15 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingRight: '20px' }}>
                <div style={{ display: 'flex', gap: '20px' }}>
                   <div>
                      <p style={{ margin: 0, fontSize: '11px', color: theme.subText }}>Monthly Rent</p>
-                     <p style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#3b82f6' }}>PKR {(r.monthlyRent || 0).toLocaleString()}</p>
+                     <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#3b82f6', whiteSpace: 'nowrap' }}>PKR {(r.monthlyRent || 0).toLocaleString()}</p>
                   </div>
-                  <div>
+                  <div style={{ borderLeft: `1px solid ${theme.border}`, paddingLeft: '15px' }}>
                      <p style={{ margin: 0, fontSize: '11px', color: theme.subText }}>Security</p>
-                     <p style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#10b981' }}>PKR {(r.securityDeposit || 0).toLocaleString()}</p>
+                     <p style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: '#10b981', whiteSpace: 'nowrap' }}>PKR {(r.securityDeposit || 0).toLocaleString()}</p>
                   </div>
                </div>
                <button style={viewBtn}><Eye size={14}/> Details</button>
@@ -382,12 +382,12 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
           }}>
              {/* Modal Header */}
              <div style={{ 
-               padding: '30px 40px', 
-               borderBottom: `1px solid ${theme.border}`,
-               display: 'flex', 
-               justifyContent: 'space-between', 
-               alignItems: 'center',
-               background: `linear-gradient(to right, ${darkMode ? '#065f4620' : '#10b98110'}, transparent)`
+                padding: '30px 40px', 
+                borderBottom: `1px solid ${theme.border}`,
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                background: `linear-gradient(to right, ${darkMode ? '#065f4620' : '#10b98110'}, transparent)`
              }}>
                <div>
                  <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>{editingId ? 'Edit Rent Property' : 'List New Rent Property'}</h3>

@@ -57,6 +57,21 @@ const Login = ({ onLogin, onForgotPassword, darkMode }) => {
     setLoading(false);
   };
 
+  const formatCNIC = (value) => {
+    let val = value.replace(/\D/g, '');
+    if (val.length > 13) val = val.slice(0, 13);
+    if (val.length > 12) return `${val.slice(0, 5)}-${val.slice(5, 12)}-${val.slice(12)}`;
+    if (val.length > 5) return `${val.slice(0, 5)}-${val.slice(5)}`;
+    return val;
+  };
+
+  const formatPhone = (value) => {
+    let val = value.replace(/\D/g, '');
+    if (val.length > 11) val = val.slice(0, 11);
+    if (val.length > 4) return `${val.slice(0, 4)}-${val.slice(4)}`;
+    return val;
+  };
+
   const handleSetupSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -68,13 +83,7 @@ const Login = ({ onLogin, onForgotPassword, darkMode }) => {
         email: setupData.email,
         password: setupData.password,
         cnic: setupData.cnic,
-        phone: setupData.phone,
-        securityQuestions: {
-          birthPlace: setupData.birthPlace,
-          favoritePet: setupData.favoritePet,
-          motherName: setupData.motherName,
-          favoriteColor: setupData.favoriteColor
-        }
+        phone: setupData.phone
       };
 
       const response = await api.post('/auth/register', payload);
@@ -190,23 +199,32 @@ const Login = ({ onLogin, onForgotPassword, darkMode }) => {
                <input required type="password" placeholder="••••••••" style={setupInputStyle(theme)} value={setupData.password} onChange={e => setSetupData({...setupData, password: e.target.value})} />
             </div>
 
+
+
             <div>
                <label style={{display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: theme.subText}}>CNIC</label>
-               <input required placeholder="00000-0000000-0" style={setupInputStyle(theme)} value={setupData.cnic} onChange={e => setSetupData({...setupData, cnic: e.target.value})} />
+               <input 
+                 required 
+                 placeholder="00000-0000000-0" 
+                 style={setupInputStyle(theme)} 
+                 value={setupData.cnic} 
+                 onChange={e => setSetupData({...setupData, cnic: formatCNIC(e.target.value)})} 
+                 maxLength={15}
+               />
             </div>
             <div>
                <label style={{display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '5px', color: theme.subText}}>Phone</label>
-               <input required placeholder="0300-0000000" style={setupInputStyle(theme)} value={setupData.phone} onChange={e => setSetupData({...setupData, phone: e.target.value})} />
+               <input 
+                 required 
+                 placeholder="0300-0000000" 
+                 style={setupInputStyle(theme)} 
+                 value={setupData.phone} 
+                 onChange={e => setSetupData({...setupData, phone: formatPhone(e.target.value)})} 
+                 maxLength={12}
+               />
             </div>
 
-            <div style={{ gridColumn: 'span 2', borderTop: `1px dashed ${theme.border}`, marginTop: '10px', paddingTop: '15px' }}>
-              <p style={{ fontSize: '12px', fontWeight: '700', color: '#3b82f6', marginBottom: '10px' }}>Security Recovery Questions</p>
-            </div>
 
-            <input required placeholder="Birth Place?" style={setupInputStyle(theme)} value={setupData.birthPlace} onChange={e => setSetupData({...setupData, birthPlace: e.target.value})} />
-            <input required placeholder="Favorite Pet?" style={setupInputStyle(theme)} value={setupData.favoritePet} onChange={e => setSetupData({...setupData, favoritePet: e.target.value})} />
-            <input required placeholder="Mother Name?" style={setupInputStyle(theme)} value={setupData.motherName} onChange={e => setSetupData({...setupData, motherName: e.target.value})} />
-            <input required placeholder="Favorite Color?" style={setupInputStyle(theme)} value={setupData.favoriteColor} onChange={e => setSetupData({...setupData, favoriteColor: e.target.value})} />
 
             <button 
               type="submit" 
