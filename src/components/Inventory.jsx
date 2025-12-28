@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlusCircle, User, Home, DollarSign, Search, Filter, Eye, X, Trash2 } from 'lucide-react';
+import { PlusCircle, User, Home, DollarSign, Search, Filter, Eye, X, Trash2, Edit2 } from 'lucide-react';
 import PropertyDetails from './PropertyDetails';
 import api from '../api';
 
@@ -19,7 +19,8 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterScheme, setFilterScheme] = useState('All');
-  const [newPlot, setNewPlot] = useState({ 
+  const [editingId, setEditingId] = useState(null);
+  const initialPlotState = { 
     plot: '', 
     sizeNum: '', 
     sizeUnit: 'Marla', 
@@ -36,7 +37,8 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
     buyerPhone: '',
     buyerCnic: '',
     buyerAddress: ''
-  });
+  };
+  const [newPlot, setNewPlot] = useState(initialPlotState);
 
   const fetchProperties = async () => {
     try {
@@ -91,14 +93,56 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
         buyerCnic: newPlot.buyerCnic,
         buyerAddress: newPlot.buyerAddress
       };
-      await api.post('/properties', payload);
+
+      if (editingId) {
+        await api.put(`/properties/${editingId}`, payload);
+        showToast("Property updated successfully", "success");
+      } else {
+        await api.post('/properties', payload);
+        showToast("Property added successfully", "success");
+      }
+
       fetchProperties();
       setShowForm(false);
-      setNewPlot({ plot: '', sizeNum: '', sizeUnit: 'Marla', size: '', scheme: '', price: '', advancePayment: '', downPayment: '', installments: '', years: '', rawYears: 0, monthly: '', buyerName: '', buyerPhone: '', buyerCnic: '', buyerAddress: '' });
-      showToast("Property added successfully", "success");
+      setEditingId(null);
+      setNewPlot(initialPlotState);
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to add plot', "error");
+      showToast(err.response?.data?.message || (editingId ? 'Failed to update plot' : 'Failed to add plot'), "error");
     }
+  };
+
+  const handleEditProperty = (p, e) => {
+    e.stopPropagation();
+    setEditingId(p._id);
+
+    // Parse size "5 Marla" -> num: 5, unit: Marla
+    const sizeParts = (p.size || '').split(' ');
+    const sizeNum = sizeParts[0] || '';
+    const sizeUnit = sizeParts[1] || 'Marla';
+
+    // Recalculate installments logic for display
+    const { inst, yrs, rawYears } = calculateInstallments(p.totalPrice, p.advancePayment, p.downPayment, p.monthlyInstallment);
+
+    setNewPlot({
+        plot: p.plotNumber,
+        sizeNum: sizeNum,
+        sizeUnit: sizeUnit,
+        size: p.size,
+        scheme: p.scheme,
+        price: p.totalPrice,
+        advancePayment: p.advancePayment,
+        downPayment: p.downPayment,
+        installments: inst,
+        years: yrs,
+        rawYears: rawYears || p.numYears,
+        monthly: p.monthlyInstallment,
+        buyerName: p.buyerName || '',
+        buyerPhone: p.buyerPhone || '',
+        buyerCnic: p.buyerCnic || '',
+        buyerAddress: p.buyerAddress || ''
+    });
+
+    setShowForm(true);
   };
 
   const handleDeleteProperty = async (id, e) => {
@@ -211,7 +255,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
           </div>
 
           {currentUser?.role === 'admin' && (
-            <button onClick={() => setShowForm(true)} style={primaryBtn}>
+            <button onClick={() => { setShowForm(true); setEditingId(null); setNewPlot(initialPlotState); }} style={primaryBtn}>
               <PlusCircle size={18}/> Add New Plot
             </button>
           )}
@@ -237,11 +281,18 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                    {(p.totalPrice - ((p.advancePayment || 0) + (p.downPayment || 0) + (p.payments?.reduce((s,pay)=>s+pay.amount,0)||0)) <= 0) ? 'Completed' : p.status}
                 </span>
                 {currentUser?.role === 'admin' && (
-                  <Trash2 
-                    size={16} 
-                    style={{ color: '#ef4444', cursor: 'pointer' }} 
-                    onClick={(e) => handleDeleteProperty(p._id, e)}
-                  />
+                  <>
+                    <Edit2 
+                      size={16} 
+                      style={{ color: '#3b82f6', cursor: 'pointer' }} 
+                      onClick={(e) => handleEditProperty(p, e)}
+                    />
+                    <Trash2 
+                      size={16} 
+                      style={{ color: '#ef4444', cursor: 'pointer' }} 
+                      onClick={(e) => handleDeleteProperty(p._id, e)}
+                    />
+                  </>
                 )}
               </div>
             </div>
@@ -289,7 +340,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
         <div style={modalOverlay}>
           <div style={{ padding: '30px', borderRadius: '25px', width: '600px', background: theme.card, color: theme.text, maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ fontWeight: '800', margin: 0 }}>Plot Booking Form</h3>
+              <h3 style={{ fontWeight: '800', margin: 0 }}>{editingId ? 'Edit Plot Details' : 'Plot Booking Form'}</h3>
               <X onClick={() => setShowForm(false)} style={{ cursor: 'pointer', color: theme.subText }} size={24}/>
             </div>
             <form onSubmit={handleAddPlot} style={{ display: 'flex', flexDirection: 'column', gap: '25px', padding: '10px' }}>
@@ -303,17 +354,17 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                    <div>
                       <label style={labelStyle}>Plot Number / ID</label>
-                      <input required placeholder="e.g. Plot 45-A" style={inputStyle(theme)} onChange={e => setNewPlot({...newPlot, plot: e.target.value})} />
+                      <input required placeholder="e.g. Plot 45-A" style={inputStyle(theme)} value={newPlot.plot} onChange={e => setNewPlot({...newPlot, plot: e.target.value})} />
                    </div>
                    <div>
                       <label style={labelStyle}>Scheme / Project Name</label>
-                      <input required placeholder="e.g. Royal Orchard" style={inputStyle(theme)} onChange={e => setNewPlot({...newPlot, scheme: e.target.value})} />
+                      <input required placeholder="e.g. Royal Orchard" style={inputStyle(theme)} value={newPlot.scheme} onChange={e => setNewPlot({...newPlot, scheme: e.target.value})} />
                    </div>
                 </div>
                 <div style={{ marginTop: '15px' }}>
                    <label style={labelStyle}>Area Size</label>
                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <input required type="number" placeholder="Size (e.g. 5)" style={{...inputStyle(theme), flex: 1}} onChange={e => {
+                      <input required type="number" placeholder="Size (e.g. 5)" style={{...inputStyle(theme), flex: 1}} value={newPlot.sizeNum} onChange={e => {
                         const num = e.target.value;
                         setNewPlot({...newPlot, sizeNum: num, size: `${num} ${newPlot.sizeUnit}`});
                       }} />
@@ -339,18 +390,18 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={labelStyle}>Total Property Price (PKR)</label>
-                  <input required type="number" placeholder="0.00" style={{...inputStyle(theme), background: theme.card, fontSize: '16px', fontWeight: '700', color: '#10b981'}} onChange={e => onFinanceChange('price', e.target.value)} />
+                  <input required type="number" placeholder="0.00" style={{...inputStyle(theme), background: theme.card, fontSize: '16px', fontWeight: '700', color: '#10b981'}} value={newPlot.price} onChange={e => onFinanceChange('price', e.target.value)} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                    <div>
                       <label style={labelStyle}>Token / Advance (Optional)</label>
-                      <input type="number" placeholder="Initial Token" style={inputStyle(theme)} onChange={e => onFinanceChange('advancePayment', e.target.value)} /> 
+                      <input type="number" placeholder="Initial Token" style={inputStyle(theme)} value={newPlot.advancePayment} onChange={e => onFinanceChange('advancePayment', e.target.value)} /> 
                       <p style={{ fontSize: '10px', color: theme.subText, marginTop: '5px' }}>Booking amount (if any)</p>
                    </div>
                    <div>
                       <label style={labelStyle}>Down Payment (Optional)</label>
-                      <input type="number" placeholder="Lump sum payment" style={inputStyle(theme)} onChange={e => onFinanceChange('downPayment', e.target.value)} />
+                      <input type="number" placeholder="Lump sum payment" style={inputStyle(theme)} value={newPlot.downPayment} onChange={e => onFinanceChange('downPayment', e.target.value)} />
                       <p style={{ fontSize: '10px', color: theme.subText, marginTop: '5px' }}>Major payment after booking</p>
                    </div>
                 </div>
@@ -358,7 +409,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'center', background: theme.card, padding: '15px', borderRadius: '15px', border: `1px solid ${theme.border}` }}>
                    <div>
                       <label style={labelStyle}>Monthly Installment</label>
-                      <input type="number" placeholder="0.00" style={inputStyle(theme)} onChange={e => onFinanceChange('monthly', e.target.value)} />
+                      <input type="number" placeholder="0.00" style={inputStyle(theme)} value={newPlot.monthly} onChange={e => onFinanceChange('monthly', e.target.value)} />
                    </div>
                    <div style={{ textAlign: 'right' }}>
                        <div style={{ fontSize: '11px', color: theme.subText }}>Estimated Tenure</div>
@@ -393,7 +444,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
 
                 <div>
                    <label style={labelStyle}>Residential Address</label>
-                   <textarea required placeholder="Full Address" style={{...inputStyle(theme), height: '80px', resize: 'none'}} onChange={e => setNewPlot({...newPlot, buyerAddress: e.target.value})} />
+                   <textarea required placeholder="Full Address" style={{...inputStyle(theme), height: '80px', resize: 'none'}} value={newPlot.buyerAddress} onChange={e => setNewPlot({...newPlot, buyerAddress: e.target.value})} />
                 </div>
               </div>
 
@@ -406,7 +457,7 @@ const Inventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
               </div>
 
               <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
-                <button type="submit" style={{ ...primaryBtn, flex: 1, padding: '15px', fontSize: '16px' }}>Confirm & Create</button>
+                <button type="submit" style={{ ...primaryBtn, flex: 1, padding: '15px', fontSize: '16px' }}>{editingId ? 'Update Property' : 'Confirm & Create'}</button>
                 <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, padding: '15px', borderRadius: '12px', color: theme.subText, fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
               </div>
             </form>

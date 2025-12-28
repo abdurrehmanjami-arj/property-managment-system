@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, Search, Filter, Eye, X, Trash2, Home, Key, User, Phone, MapPin, Building, DollarSign } from 'lucide-react';
+import { PlusCircle, Search, Filter, Eye, X, Trash2, Home, Key, User, Phone, MapPin, Building, DollarSign, Edit2 } from 'lucide-react';
 import RentDetails from './RentDetails';
 import api from '../api';
 import { useSocket } from '../contexts/SocketContext';
@@ -36,11 +36,13 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const [newRent, setNewRent] = useState({
+  const [editingId, setEditingId] = useState(null);
+  const initialRentState = {
     houseNumber: '', address: '', type: 'House', ownerName: '', ownerPhone: '',
     tenantName: '', tenantFatherName: '', tenantPhone: '', tenantCnic: '',
     tenantAddress: '', monthlyRent: '', securityDeposit: '', status: 'Occupied'
-  });
+  };
+  const [newRent, setNewRent] = useState(initialRentState);
 
   const theme = {
     card: darkMode ? '#1e293b' : '#ffffff',
@@ -89,18 +91,41 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
   const handleAddRent = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/rents', newRent);
+      if (editingId) {
+        await api.put(`/rents/${editingId}`, newRent);
+        showToast('Rent record updated successfully', 'success');
+      } else {
+        await api.post('/rents', newRent);
+        showToast('Rent record added successfully', 'success');
+      }
       fetchRents();
       setShowForm(false);
-      setNewRent({ 
-        houseNumber: '', address: '', type: 'House', ownerName: '', ownerPhone: '', 
-        tenantName: '', tenantFatherName: '', tenantPhone: '', tenantCnic: '', 
-        tenantAddress: '', monthlyRent: '', securityDeposit: '', status: 'Occupied' 
-      });
-      showToast('Rent record added successfully', 'success');
+      setEditingId(null);
+      setNewRent(initialRentState);
     } catch (err) {
-      showToast('Failed to add rent record', 'error');
+      showToast(editingId ? 'Failed to update rent record' : 'Failed to add rent record', 'error');
     }
+  };
+
+  const handleEditRent = (r, e) => {
+    e.stopPropagation();
+    setEditingId(r._id);
+    setNewRent({
+      houseNumber: r.houseNumber || '',
+      address: r.address || '',
+      type: r.type || 'House',
+      ownerName: r.ownerName || '',
+      ownerPhone: r.ownerPhone || '',
+      tenantName: r.tenantName || '',
+      tenantFatherName: r.tenantFatherName || '',
+      tenantPhone: r.tenantPhone || '',
+      tenantCnic: r.tenantCnic || '',
+      tenantAddress: r.tenantAddress || '',
+      monthlyRent: r.monthlyRent || '',
+      securityDeposit: r.securityDeposit || '',
+      status: r.status || 'Occupied'
+    });
+    setShowForm(true);
   };
 
   const handleDeleteRent = (id, e) => {
@@ -185,7 +210,7 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
             <option value="Office">Office</option>
           </select>
 
-          <button onClick={() => setShowForm(true)} style={primaryBtn}>
+          <button onClick={() => { setShowForm(true); setEditingId(null); setNewRent(initialRentState); }} style={primaryBtn}>
             <PlusCircle size={18}/> Add Property
           </button>
         </div>
@@ -202,7 +227,12 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                     background: r.status === 'Occupied' ? '#10b98115' : '#f59e0b15', 
                     color: r.status === 'Occupied' ? '#10b981' : '#f59e0b' 
                   }}>{r.status}</span>
-                  {isAdmin && <Trash2 size={16} style={{ color: '#ef4444', cursor: 'pointer' }} onClick={(e) => handleDeleteRent(r._id, e)}/>}
+                  {isAdmin && (
+                    <>
+                      <Edit2 size={16} style={{ color: '#3b82f6', cursor: 'pointer', marginRight: '5px' }} onClick={(e) => handleEditRent(r, e)}/>
+                      <Trash2 size={16} style={{ color: '#ef4444', cursor: 'pointer' }} onClick={(e) => handleDeleteRent(r._id, e)}/>
+                    </>
+                  )}
                </div>
             </div>
 
@@ -360,7 +390,7 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
                background: `linear-gradient(to right, ${darkMode ? '#065f4620' : '#10b98110'}, transparent)`
              }}>
                <div>
-                 <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>List New Rent Property</h3>
+                 <h3 style={{ fontSize: '24px', fontWeight: '900', margin: 0 }}>{editingId ? 'Edit Rent Property' : 'List New Rent Property'}</h3>
                  <p style={{ margin: '5px 0 0 0', fontSize: '13px', color: theme.subText }}>Add a house, shop or office to rental inventory</p>
                </div>
                <div 
@@ -459,7 +489,7 @@ const RentInventory = ({ darkMode, currentUser, showToast, askConfirm }) => {
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <button type="submit" style={{ ...primaryBtn, flex: 2, padding: '18px', borderRadius: '18px', fontSize: '16px' }}>
-                    Save Rent Record
+                    {editingId ? 'Update Rent Record' : 'Save Rent Record'}
                   </button>
                   <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.subText, borderRadius: '18px', fontWeight: '700', cursor: 'pointer' }}>
                     Cancel

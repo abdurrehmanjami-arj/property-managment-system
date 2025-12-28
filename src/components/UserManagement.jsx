@@ -65,7 +65,7 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
           fetchUsers();
           showToast("User deleted successfully", "success");
         } catch (err) {
-          showToast("Failed to delete user", "error");
+          showToast(err.response?.data?.message || "Failed to delete user", "error");
         }
       }
     );
@@ -139,6 +139,8 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
      emp.email?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const totalAdmins = employees.filter(e => e.role === 'admin').length;
+
   if (loading) return <div style={{ color: theme.text, padding: '20px' }}>Loading team members...</div>;
 
   return (
@@ -185,7 +187,9 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredEmployees.map((emp) => (
+            {filteredEmployees.map((emp) => {
+              const isLastAdmin = emp.role === 'admin' && totalAdmins <= 1;
+              return (
               <tr key={emp._id || emp.id} style={{ borderBottom: `1px solid ${theme.border}`, transition: '0.2s' }}>
                 <td style={{ padding: '15px 20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -226,13 +230,21 @@ const UserManagement = ({ darkMode, showToast, askConfirm, currentUser }) => {
                     <button onClick={() => handleEditClick(emp)} style={iconEditBtn}>
                       <Pencil size={18} />
                     </button>
-                    <button onClick={() => handleDelete(emp._id || emp.id)} style={iconDeleteBtn}>
+                    <button 
+                      onClick={() => !isLastAdmin && handleDelete(emp._id || emp.id)} 
+                      style={{ 
+                        ...iconDeleteBtn, 
+                        opacity: isLastAdmin ? 0.3 : 1, 
+                        cursor: isLastAdmin ? 'not-allowed' : 'pointer' 
+                      }}
+                      title={isLastAdmin ? "Cannot delete the only Admin" : "Delete User"}
+                    >
                       <Trash2 size={18} />
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

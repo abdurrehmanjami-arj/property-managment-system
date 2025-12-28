@@ -60,7 +60,7 @@ const Sidebar = ({ darkMode, activeTab, setActiveTab, user, onLogout, isOpen, to
         <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '5px' }}>Property Management System</p>
       </div>
       
-      <nav style={{ padding: '0 15px', flex: 1, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+      <nav className="custom-scroll" style={{ padding: '0 15px', flex: 1, overflowY: 'auto' }}>
         <div 
           onClick={() => setActiveTab('dashboard')}
           style={{ 

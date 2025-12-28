@@ -6,44 +6,75 @@ const nodemailer = require("nodemailer");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
 
+// Check if system is initialized (has users)
+router.get("/setup-status", async (req, res) => {
+  try {
+    const count = await User.countDocuments();
+    res.json({ isInitialized: count > 0 });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Register First Admin (Only allowed if no users exist)
 router.post("/register", async (req, res) => {
   try {
-    const { name, email, password, cnic, phone, role, securityQuestions } =
-      req.body;
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "User already exists" });
+    const count = await User.countDocuments();
 
-    const { birthPlace, favoritePet, motherName, favoriteColor } =
-      securityQuestions || {};
-    user = new User({
+    // Security: Only allow public registration if DB is empty
+    if (count > 0) {
+      return res
+        .status(403)
+        .json({ message: "System already initialized. Admin account exists." });
+    }
+
+    const { name, email, password, cnic, phone, securityQuestions } = req.body;
+
+    // Force role to admin for the first user
+    const user = new User({
       name,
       email,
       password,
       cnic,
       phone,
-      role,
+      role: "admin",
+      isOnline: true, // Login immediately
       securityQuestions: {
-        birthPlace: birthPlace?.toLowerCase().trim(),
-        favoritePet: favoritePet?.toLowerCase().trim(),
-        motherName: motherName?.toLowerCase().trim(),
-        favoriteColor: favoriteColor?.toLowerCase().trim(),
+        birthPlace: securityQuestions?.birthPlace?.toLowerCase().trim(),
+        favoritePet: securityQuestions?.favoritePet?.toLowerCase().trim(),
+        motherName: securityQuestions?.motherName?.toLowerCase().trim(),
+        favoriteColor: securityQuestions?.favoriteColor?.toLowerCase().trim(),
       },
     });
+
     await user.save();
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { id: user._id, role: user.role, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+
+    // Initialize session
+    user.activeSessions.push({
+      token,
+      loginTime: new Date(),
+      lastActivity: new Date(),
+      userAgent: req.headers["user-agent"] || "Unknown",
+      ipAddress: req.ip || "Unknown",
+    });
+    await user.save();
+
     res.json({
       token,
       user: {
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
         cnic: user.cnic,
       },
+      message: "Admin account created successfully",
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -84,6 +115,17 @@ router.delete("/users/:id", auth, async (req, res) => {
     const userToDelete = await User.findById(req.params.id);
     if (!userToDelete) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Prevent deleting the last Admin
+    if (userToDelete.role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          message:
+            "Cannot delete the last remaining Admin account. Create another Admin first.",
+        });
+      }
     }
 
     // Emit force logout event to the user being deleted
@@ -340,47 +382,70 @@ router.post("/login", async (req, res) => {
         .status(400)
         .json({ message: "Incorrect password. Please try again." });
 
-    // Check for existing active sessions
-    if (!forceLogin && user.activeSessions && user.activeSessions.length > 0) {
-      // Check if any session is still valid (less than 24 hours old)
-      const validSessions = user.activeSessions.filter((session) => {
-        const sessionAge = Date.now() - new Date(session.loginTime).getTime();
-        return sessionAge < 24 * 60 * 60 * 1000; // 24 hours
-      });
+    // 1. Clean up expired sessions first (Always do this to keep DB clean)
+    if (user.activeSessions && user.activeSessions.length > 0) {
+      user.activeSessions = user.activeSessions.filter((session) => {
+        if (!session.loginTime) return false;
+        const loginTime = new Date(session.loginTime).getTime();
+        // If date is invalid, remove it
+        if (isNaN(loginTime)) return false;
 
-      if (validSessions.length > 0) {
-        return res.status(409).json({
-          message: "Already logged in on another device",
-          code: "ALREADY_LOGGED_IN",
-          sessionInfo: {
-            loginTime: validSessions[0].loginTime,
-            userAgent: validSessions[0].userAgent,
-          },
-        });
-      }
+        // Remove sessions older than 24h
+        return Date.now() - loginTime < 24 * 60 * 60 * 1000;
+      });
+      // Force Mongoose to acknowledge the array modification
+      user.markModified("activeSessions");
+      await user.save();
     }
 
-    // If forceLogin is true, clear all existing sessions and emit logout event
-    if (forceLogin && user.activeSessions && user.activeSessions.length > 0) {
-      // Emit force logout to all active sessions
+    // 2. Refresh user from DB to be absolutely sure we have latest state
+    // (Optional but good for concurrency, though overkill. We skip for speed.)
+
+    // 3. Strict Check for Concurrent Sessions
+    // We check the LOCAL cleaned version of sessions
+    const validSessions = user.activeSessions || [];
+
+    if (!forceLogin && validSessions.length > 0) {
+      return res.status(409).json({
+        message: "Already logged in on another device",
+        code: "ALREADY_LOGGED_IN",
+        sessionInfo: {
+          loginTime: validSessions[0].loginTime,
+          userAgent: validSessions[0].userAgent,
+        },
+      });
+    }
+
+    // 4. Handle Force Login / Logout All
+    if (forceLogin) {
+      // Clear sessions
+      user.activeSessions = [];
+      user.markModified("activeSessions");
+
+      // Emit force logout to old sessions
       if (global.emitToUser) {
         global.emitToUser(user._id.toString(), "force-logout", {
           reason: "New login from another device",
         });
       }
-      user.activeSessions = [];
+
+      await user.save();
+
+      // If onlyLogout requested (e.g. from the popup), stop here
+      if (req.body.onlyLogout) {
+        return res.json({ message: "All devices logged out successfully." });
+      }
     }
 
     user.isOnline = true;
 
-    // Create new session
+    // 5. Create new session
     const token = jwt.sign(
       { id: user._id, role: user.role, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
-    // Add new session to activeSessions
     const newSession = {
       token: token,
       loginTime: new Date(),
@@ -390,6 +455,7 @@ router.post("/login", async (req, res) => {
     };
 
     user.activeSessions.push(newSession);
+    user.markModified("activeSessions");
     await user.save();
 
     res.json({
@@ -403,6 +469,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
+    console.error("Login Error detected:", err);
     res.status(500).json({ message: err.message });
   }
 });
