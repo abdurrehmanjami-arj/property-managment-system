@@ -25,7 +25,7 @@ const BackupRestore = ({ darkMode, showToast, askConfirm }) => {
       const response = await api.get('/backup/backup-stats');
       setStats(response.data.stats);
     } catch (err) {
-      console.error('Failed to fetch stats:', err);
+
     }
   };
 

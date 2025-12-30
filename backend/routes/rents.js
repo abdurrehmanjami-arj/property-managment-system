@@ -98,9 +98,6 @@ router.post("/:id/pay", auth, async (req, res) => {
 // Update a specific payment record
 router.put("/:rentId/payments/:paymentId", auth, async (req, res) => {
   try {
-    console.log(
-      `Updating payment: rent=${req.params.rentId}, payment=${req.params.paymentId}`
-    );
     if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Only admins can edit payments" });
     }
@@ -126,7 +123,6 @@ router.put("/:rentId/payments/:paymentId", auth, async (req, res) => {
     });
     res.json(rent);
   } catch (err) {
-    console.error("Payment update error:", err);
     res
       .status(500)
       .json({ message: "Failed to update payment: " + err.message });

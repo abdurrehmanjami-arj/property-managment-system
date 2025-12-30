@@ -13,8 +13,6 @@ router.get("/create-backup", auth, async (req, res) => {
       return res.status(403).json({ message: "Access denied. Admins only." });
     }
 
-    console.log("Creating backup for admin:", req.user.id);
-
     // Get all data from database
     const users = await User.find({}).select("-__v");
     const properties = await Property.find({}).select("-__v");
@@ -37,16 +35,12 @@ router.get("/create-backup", auth, async (req, res) => {
       },
     };
 
-    console.log("Backup created successfully");
-    console.log("Users:", users.length, "Properties:", properties.length);
-
     res.json({
       success: true,
       message: "Backup created successfully",
       backup: backup,
     });
   } catch (err) {
-    console.error("Backup creation error:", err);
     res
       .status(500)
       .json({ message: "Failed to create backup", error: err.message });
@@ -67,14 +61,10 @@ router.post("/restore-backup", auth, async (req, res) => {
       return res.status(400).json({ message: "Invalid backup file" });
     }
 
-    console.log("Starting restore process...");
-    console.log("Backup metadata:", backup.metadata);
-
     // Clear existing data (DANGEROUS - only for restore)
     await User.deleteMany({});
     await Property.deleteMany({});
     await Rent.deleteMany({});
-    console.log("Existing data cleared");
 
     // Restore users
     if (backup.data.users && backup.data.users.length > 0) {
@@ -85,7 +75,6 @@ router.post("/restore-backup", auth, async (req, res) => {
       });
 
       await User.insertMany(usersToInsert, { ordered: false });
-      console.log("Users restored:", backup.data.users.length);
     }
 
     // Restore properties
@@ -96,7 +85,6 @@ router.post("/restore-backup", auth, async (req, res) => {
       });
 
       await Property.insertMany(propertiesToInsert, { ordered: false });
-      console.log("Properties restored:", backup.data.properties.length);
     }
 
     // Restore rents
@@ -107,7 +95,6 @@ router.post("/restore-backup", auth, async (req, res) => {
       });
 
       await Rent.insertMany(rentsToInsert, { ordered: false });
-      console.log("Rents restored:", backup.data.rents.length);
     }
 
     res.json({
@@ -120,7 +107,6 @@ router.post("/restore-backup", auth, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Restore error:", err);
     res.status(500).json({
       message: "Failed to restore backup",
       error: err.message,
@@ -135,8 +121,6 @@ router.get("/backup-stats", auth, async (req, res) => {
       return res.status(403).json({ message: "Access denied. Admins only." });
     }
 
-    console.log("Fetching backup statistics...");
-
     const userCount = await User.countDocuments();
     const propertyCount = await Property.countDocuments();
     const rentCount = await Rent.countDocuments();
@@ -150,12 +134,6 @@ router.get("/backup-stats", auth, async (req, res) => {
       }
     });
 
-    console.log("Stats:", {
-      users: userCount,
-      properties: propertyCount,
-      payments: totalPayments,
-    });
-
     res.json({
       success: true,
       stats: {
@@ -167,7 +145,6 @@ router.get("/backup-stats", auth, async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Stats error:", err);
     res
       .status(500)
       .json({ message: "Failed to get stats", error: err.message });

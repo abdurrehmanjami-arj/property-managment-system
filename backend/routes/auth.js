@@ -152,7 +152,7 @@ router.put("/users/:id", auth, async (req, res) => {
     // Role is NOT updated - it remains the same
 
     await user.save();
-    console.log("User updated successfully in DB");
+
     res.json({ message: "User updated successfully", user });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -361,7 +361,6 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Login Error detected:", err);
     res.status(500).json({ message: err.message });
   }
 });
@@ -370,21 +369,15 @@ router.post("/login", async (req, res) => {
 router.post("/verify-password", auth, async (req, res) => {
   const { password } = req.body;
   try {
-    console.log("Password verification attempt for user:", req.user.id);
-
     const user = await User.findById(req.user.id);
     if (!user) {
-      console.log("User not found:", req.user.id);
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log("Comparing password for user:", user.email);
     const isMatch = await user.comparePassword(password);
-    console.log("Password match result:", isMatch);
 
     res.json({ success: isMatch });
   } catch (err) {
-    console.error("Password verification error:", err);
     res.status(500).json({ message: "Internal server error" });
   }
 });

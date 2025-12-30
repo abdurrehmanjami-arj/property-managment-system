@@ -159,7 +159,7 @@ const Dashboard = ({ user, darkMode, setDarkMode, onLogout, toast, showToast, as
   useEffect(() => {
     if (socket) {
       socket.on('force-logout', (data) => {
-        console.log('Force logout received:', data);
+
         showToast(data.reason || 'You have been logged out', 'error');
         setTimeout(() => {
           onLogout();

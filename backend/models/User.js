@@ -12,12 +12,6 @@ const UserSchema = new mongoose.Schema(
     isOnline: { type: Boolean, default: false },
     resetPasswordToken: String,
     resetPasswordExpires: Date,
-    securityQuestions: {
-      birthPlace: String,
-      favoritePet: String,
-      motherName: String,
-      favoriteColor: String,
-    },
     activeSessions: [
       {
         token: String,

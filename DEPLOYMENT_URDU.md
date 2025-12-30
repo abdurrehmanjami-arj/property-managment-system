@@ -1,50 +1,50 @@
-# 🚀 EstatePro - Final Deployment Guide (Urdu/Hindi)
+# 🚀 EstatePro - Deployment Guide (Urdu/Hindi)
 
-Maine aapka sara code prepare kar dia hai aur GitHub par push bhi kar dia hai. Ab aapko sirf niche diye gaye steps follow karne hain:
-
-### **1. MongoDB Atlas (Database Setup)**
-
-- [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register) par login karein.
-- Ek **Free Cluster** banayein.
-- **Database User** banayein (Username/Password yaad rakhein).
-- **Network Access** mein ja kar `0.0.0.0/0` add karein.
-- **Connection String** copy karein (Example: `mongodb+srv://admin:pass@cluster.mongodb.net/estatepro`).
-
-### **2. Render (Backend Setup)**
-
-1.  [Render.com Dashboard](https://dashboard.render.com/) par jayein.
-2.  **New +** -> **Web Service** par click karein.
-3.  Apni GitHub repo `property-managment-system` connect karein.
-4.  Settings:
-    - **Name**: `estatepro-server`
-    - **Root Directory**: `backend`
-    - **Runtime**: `Node`
-    - **Build Command**: `npm install`
-    - **Start Command**: `node server.js`
-5.  **Environment Variables** (Advanced mein):
-    - `MONGODB_URI` = (Aapki MongoDB string)
-    - `JWT_SECRET` = `super-secret-key-123`
-    - `PORT` = `5000`
-6.  Click **Create Web Service**.
-7.  Jab deploy ho jaye, to aapko ek URL milega (e.g., `https://estatepro-server.onrender.com`). Isay copy kar lein.
-
-### **3. Vercel (Frontend Setup)**
-
-1.  [Vercel Dashboard](https://vercel.com/new) par jayein.
-2.  Apni repo `property-managment-system` import karein.
-3.  Settings:
-    - **Framework Preset**: Vite
-    - **Root Directory**: `./` (Default)
-4.  **Environment Variables**:
-    - `VITE_API_URL` = `https://estatepro-server.onrender.com/api` (Render ka URL + `/api`)
-5.  Click **Deploy**.
+Yeh guide aapko EstatePro system ko muft (free) deploy karne mein madad karegi. Is software mein ab koi hardcoded credentials nahi hain; aap apna admin khud banayenge.
 
 ---
 
-### **Zaroori Note:**
+### **1. Database (MongoDB Atlas)**
 
-- Render ka free plan site ko "sula" deta hai agar 15 min tak koi use na kare. Pehli baar khulne mein 30 seconds lag sakte hain.
-- Maine `vercel.json` add kar dia hai, is se site refresh karne par error nahi aayega.
-- Sare changes maine GitHub par push kar diye hain.
+- [MongoDB Atlas](https://www.mongodb.com/) par account banayein.
+- Ek network access rule add karein: `0.0.0.0/0`.
+- Connection string copy karein (Example: `mongodb+srv://user:pass@cluster0...`).
 
-**Ab aap bas upper diye hue steps ek ek karke karein, aapka project live ho jayega!**
+### **2. Backend (Render.com)**
+
+- Render par **Web Service** banayein.
+- **Root Directory**: `backend` set karein.
+- **Environment Variables**:
+  - `MONGODB_URI`: (Aapki connection string)
+  - `JWT_SECRET`: (Koi bhi lamba secret word)
+  - `CLIENT_URL`: (Aapka Vercel URL - ye lazmi hai)
+
+### **3. First-Time Admin Setup (Naya Tariqa)**
+
+Software ko deploy karne ke baad aapko kisi script ki zaroorat nahi hai:
+
+1.  Apni website ka URL open karein.
+2.  Software automatically check karega ke database khali hai.
+3.  Aapko **"System Setup"** ka screen nazar aayega.
+4.  Wahan apna Naam, Email, aur Password darj karein.
+5.  Pehla user jo register hoga, wo automatic **System Admin** ban jayega.
+
+---
+
+### **4. Frontend (Vercel)**
+
+- Vercel par project link karein.
+- **Environment Variable**: `VITE_API_URL` = `https://aapka-backend.onrender.com/api`
+
+---
+
+### **Naye Features Jo Check Karne Hain:**
+
+1. **Zero Hardcoded Users**: System ab pehle se zyada secure hai.
+2. **Real-time Logout**: Ek hi account do jagah login nahi ho sakta.
+3. **PKR Pricing**: Tamam raqam **PKR** mein show hogi.
+4. **No Security Questions**: Password recovery ab mobile number aur CNIC par munhasir hai.
+
+---
+
+**Ab aapka project bilkul naye software scenario ke mutabiq tayyar hai! 🚀**

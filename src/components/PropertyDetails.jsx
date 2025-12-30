@@ -122,7 +122,7 @@ const PropertyDetails = ({ property: initialProperty, onClose, darkMode, current
       setLoading(false);
       showToast("Payment updated successfully", "success");
     } catch (err) {
-      console.error("Edit payment error:", err);
+
       setLoading(false);
       showToast(err.response?.data?.message || "Failed to update payment", "error");
     }

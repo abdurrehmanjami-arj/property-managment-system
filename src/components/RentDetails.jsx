@@ -53,7 +53,7 @@ const RentDetails = ({ rent, onClose, darkMode, currentUser, showToast, askConfi
       setAmount(rent.monthlyRent || '');
       showToast('Payment recorded successfully', 'success');
     } catch (err) {
-      console.error(err);
+
       showToast('Failed to record payment', 'error');
     }
   };

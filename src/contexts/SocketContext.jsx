@@ -21,17 +21,17 @@ export const SocketProvider = ({ children, user }) => {
       });
 
       newSocket.on('connect', () => {
-        console.log('🔌 Connected to Socket.IO server');
+
         // Authenticate the socket with user ID
         newSocket.emit('authenticate', user.id || user._id);
       });
 
       newSocket.on('disconnect', () => {
-        console.log('🔌 Disconnected from Socket.IO server');
+
       });
 
       newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+
       });
 
       setSocket(newSocket);

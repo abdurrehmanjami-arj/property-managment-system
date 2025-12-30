@@ -32,15 +32,12 @@ app.set("io", io);
 const userSockets = new Map(); // Map userId to socket IDs
 
 io.on("connection", (socket) => {
-  console.log("🔌 Client connected:", socket.id);
-
   socket.on("authenticate", (userId) => {
     if (userId) {
       if (!userSockets.has(userId)) {
         userSockets.set(userId, new Set());
       }
       userSockets.get(userId).add(socket.id);
-      console.log(`✅ User ${userId} authenticated with socket ${socket.id}`);
     }
   });
 
@@ -54,7 +51,6 @@ io.on("connection", (socket) => {
         }
       }
     }
-    console.log("🔌 Client disconnected:", socket.id);
   });
 });
 
@@ -65,26 +61,18 @@ global.emitToUser = (userId, event, data) => {
     sockets.forEach((socketId) => {
       io.to(socketId).emit(event, data);
     });
-    console.log(`📤 Emitted ${event} to user ${userId}`);
   }
 };
 
 // Global broadcast to all connected clients
 global.broadcast = (event, data) => {
   io.emit(event, data);
-  console.log(`📡 Broadcasted ${event}`);
 };
 
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ Connected to MongoDB Successfully!"))
-  .catch((err) => {
-    console.error("❌ MONGODB CONNECTION ERROR!");
-    console.error(
-      "Please make sure MongoDB is installed and RUNNING on your computer."
-    );
-    console.error("Error Details:", err.message);
-  });
+  .then(() => {})
+  .catch((err) => {});
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/properties", require("./routes/properties"));
@@ -92,4 +80,4 @@ app.use("/api/rents", require("./routes/rents"));
 app.use("/api/backup", require("./routes/backup"));
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () => {});

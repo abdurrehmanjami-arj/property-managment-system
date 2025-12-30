@@ -28,7 +28,7 @@ const Login = ({ onLogin, onForgotPassword, darkMode }) => {
       const response = await api.get('/auth/setup-status');
       setIsInitialized(response.data.isInitialized);
     } catch (err) {
-      console.error("Failed to check system status", err);
+
       // Fallback to login mode if check fails (assume system is up)
       setIsInitialized(true); 
     }
@@ -45,7 +45,7 @@ const Login = ({ onLogin, onForgotPassword, darkMode }) => {
       await onLogin(email, password, forceLogin);
       setShowForceLoginModal(false);
     } catch (error) {
-      console.error('Login error:', error);
+
       // Check if error is "already logged in"
       if (error.response?.status === 409 && error.response?.data?.code === 'ALREADY_LOGGED_IN') {
         setSessionInfo(error.response.data.sessionInfo);

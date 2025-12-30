@@ -108,7 +108,7 @@ const DashboardHome = ({ darkMode, setActiveTab, showToast }) => {
   useEffect(() => {
     if (socket) {
       socket.on('data-updated', (data) => {
-        console.log('Live Update Received:', data);
+
         fetchDashboardData(true); // Silent refresh
       });
 
